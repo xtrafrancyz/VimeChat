@@ -91,7 +91,7 @@ public final class MuteManager implements Listener{
         return true;
     }
     
-    public static boolean containsGroup(ru.tehkode.permissions.PermissionGroup[] groups, String name){
+    private static boolean containsGroup(ru.tehkode.permissions.PermissionGroup[] groups, String name){
         for (ru.tehkode.permissions.PermissionGroup g :groups)
             if (g.getName().equalsIgnoreCase(name))
                 return true;

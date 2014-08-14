@@ -23,11 +23,8 @@ public class ChatListener implements Listener{
         players.clear();
     }
     
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onChat(final AsyncPlayerChatEvent event){
-        if (event.isCancelled())
-            return;
-        
         final Response res = processChat(event.getPlayer(), event.getMessage());
         event.setMessage(res.message);
         
@@ -42,7 +39,6 @@ public class ChatListener implements Listener{
     }
     
     public Response processChat(final Player player, String message){
-        
         message = message
                 //восклицательные и вопросительные знаки не больше одного
                 .replaceAll("(\\!|\\?)\\1+", "$1")

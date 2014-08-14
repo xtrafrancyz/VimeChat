@@ -1,0 +1,34 @@
+name: VimeChat
+main: net.xtrafrancyz.vime.VimeChat.Main
+version: 1.3
+author: xtrafrancyz
+website: http://xtrafrancyz.net
+loadbefore: [Essentials]
+
+commands:
+  mute:
+    description: Мутит игрока
+    usage: /mute <player> <time> <reason>
+    permission: vimechat.mute
+  unmute:
+    description: Размучивает игрока
+    usage: /unmute <player>
+    permission: vimechat.unmute
+  mutelist:
+    description: Показывает замученных игроков
+    usage: /mutelist
+    permission: vimechat.mutelist
+
+permissions:
+  vimechat.*:
+    default: op
+    children:
+      vimechat.mute: true
+      vimechat.unmute: true
+      vimechat.mutelist: true
+  vimechat.unmute:
+    default: op
+  vimechat.mute:
+    default: op
+  vimechat.mutelist:
+    default: op

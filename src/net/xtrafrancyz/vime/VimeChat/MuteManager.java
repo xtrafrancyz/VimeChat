@@ -66,15 +66,15 @@ public final class MuteManager implements Listener{
             ru.tehkode.permissions.PermissionUser user = ru.tehkode.permissions.bukkit.PermissionsEx.getPermissionManager().getUser(admin);
             ru.tehkode.permissions.PermissionGroup[] groups = user.getGroups();
             
-            if (containsGroup(groups, "Admin"))
+            if (Helper.containsGroup(groups, "Admin"))
                 prefix = "&f[&3"+admin+"&f] ";
-            else if (containsGroup(groups, "Admins"))
+            else if (Helper.containsGroup(groups, "Admins"))
                 prefix = "&f[&3&l"+admin+"&f] ";
-            else if (containsGroup(groups, "Moder") || containsGroup(groups, "ServerModer"))
+            else if (Helper.containsGroup(groups, "Moder") || Helper.containsGroup(groups, "ServerModer"))
                 prefix = "&f[&b"+admin+"&f] ";
-            else if (containsGroup(groups, "MainModer"))
+            else if (Helper.containsGroup(groups, "MainModer"))
                 prefix = "&f[&b&l"+admin+"&f] ";
-            else if (containsGroup(groups, "Helper") || containsGroup(groups, "PHelper"))
+            else if (Helper.containsGroup(groups, "Helper") || Helper.containsGroup(groups, "PHelper"))
                 prefix = "&f[&5"+admin+"&f] ";
             else
                 prefix = "&f[&a"+admin+"&f] ";
@@ -91,11 +91,13 @@ public final class MuteManager implements Listener{
         return true;
     }
     
-    private static boolean containsGroup(ru.tehkode.permissions.PermissionGroup[] groups, String name){
-        for (ru.tehkode.permissions.PermissionGroup g :groups)
-            if (g.getName().equalsIgnoreCase(name))
-                return true;
-        return false;
+    private static class Helper{
+        private static boolean containsGroup(ru.tehkode.permissions.PermissionGroup[] groups, String name){
+            for (ru.tehkode.permissions.PermissionGroup g :groups)
+                if (g.getName().equalsIgnoreCase(name))
+                    return true;
+            return false;
+        }
     }
     
     public boolean unMute(String player){

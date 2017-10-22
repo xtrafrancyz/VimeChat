@@ -58,8 +58,6 @@ public class Main extends JavaPlugin{
                 senderName = sender.getName();
             }
 
-            System.out.println(command.getName());
-
             //Мут
             if (command.getName().equalsIgnoreCase("mute")){
                 if (args.length == 0){
@@ -75,6 +73,10 @@ public class Main extends JavaPlugin{
                         }catch(NumberFormatException e){
                             time = 0;
                         }
+                    if (time < 0) {
+                        sender.sendMessage(ChatColor.RED+"Время мута должно быть больше нуля");
+                        return true;
+                    }
                     for (; i<args.length; i++)
                         reason += args[i] + (i==args.length-1 ? "" : " ");
 

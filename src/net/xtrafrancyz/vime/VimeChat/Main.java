@@ -70,7 +70,7 @@ public class Main extends JavaPlugin{
                     int i = 1;
                     if (args.length > 1)
                         try{
-                            time = Integer.parseInt(args[1]);
+                            time = Math.abs(Integer.parseInt(args[1]));
                             i = 2;
                         }catch(NumberFormatException e){
                             time = 0;

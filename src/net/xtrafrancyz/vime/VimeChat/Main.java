@@ -90,12 +90,18 @@ public class Main extends JavaPlugin{
                 if (args.length == 0){
                     sender.sendMessage(ChatColor.RED+"Использование: /unmute <ник>");
                 }else{
+                     String senderName;
+                       if (sender instanceof ConsoleCommandSender){
+                       senderName = "#console";
+                     }else{
+                  senderName = sender.getName();
+                    }
                     Player player = getServer().getPlayer(args[0]);
                     if (player == null){
-                        if (!mute.unMute(args[0]))
+                        if (!mute.unMute(senderName, args[0]))
                             sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&eИгрок &a"+args[0]+"&e не был замучен"));
                     }else{
-                        if (!mute.unMute(player.getName()))
+                        if (!mute.unMute(senderName, player.getName()))
                             sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&eИгрок &a"+player.getName()+"&e не был замучен"));
                     }
                 }

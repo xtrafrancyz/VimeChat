@@ -100,10 +100,36 @@ public final class MuteManager implements Listener{
         }
     }
     
-    public boolean unMute(String player){
+    public boolean unMute(String admin, String player){
         if (isMuted(player)){
+            String prefix;
+        
+        if (admin.equals("#antiflood")){
+            prefix = "&f[&cАнтиФлуд&f] ";
+        } else if (admin.equals("#console")){
+            prefix = "&f[&aСервер&f] ";
+        } else if (Main.usePex){
+            ru.tehkode.permissions.PermissionUser user = ru.tehkode.permissions.bukkit.PermissionsEx.getPermissionManager().getUser(admin);
+            ru.tehkode.permissions.PermissionGroup[] groups = user.getGroups();
+            
+            if (Helper.containsGroup(groups, "Admin"))
+                prefix = "&f[&3"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "Admins"))
+                prefix = "&f[&3&l"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "Moder") || Helper.containsGroup(groups, "ServerModer"))
+                prefix = "&f[&b"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "MainModer"))
+                prefix = "&f[&b&l"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "Helper") || Helper.containsGroup(groups, "PHelper"))
+                prefix = "&f[&5"+admin+"&f] ";
+            else
+                prefix = "&f[&a"+admin+"&f] ";
+            
+        } else {
+            prefix = "&f[&a"+admin+"&f] ";
+        }
             mutedPlayers.remove(player);
-            plugin.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', "&eИгрок &a"+player+"&e снова может писать в чат"));
+            plugin.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', prefix + "&eИгрок &a"+player+"&e снова может писать в чат"));
             return true;
         }
         return false;

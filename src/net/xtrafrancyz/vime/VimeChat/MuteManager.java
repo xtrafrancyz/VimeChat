@@ -42,6 +42,31 @@ public final class MuteManager implements Listener{
         startLoop();
     }
     
+    private String getPrefix(String admin) {
+        if (admin.equals("#antiflood")){
+            return "&f[&cАнтиФлуд&f] ";
+        } else if (admin.equals("#console")){
+            return "&f[&aСервер&f] ";
+        } else if (Main.usePex){
+            ru.tehkode.permissions.PermissionUser user = ru.tehkode.permissions.bukkit.PermissionsEx.getPermissionManager().getUser(admin);
+            ru.tehkode.permissions.PermissionGroup[] groups = user.getGroups();
+            if (Helper.containsGroup(groups, "Admin"))
+                return "&f[&3"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "Admins"))
+                return "&f[&3&l"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "Moder") || Helper.containsGroup(groups, "ServerModer"))
+                return "&f[&b"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "MainModer"))
+                return "&f[&b&l"+admin+"&f] ";
+            else if (Helper.containsGroup(groups, "Helper") || Helper.containsGroup(groups, "PHelper"))
+                return "&f[&5"+admin+"&f] ";
+            else
+                return "&f[&a"+admin+"&f] ";
+        } else {
+            return "&f[&a"+admin+"&f] ";
+        }
+    }
+    
     public boolean mute(String admin, String player, int time, String reason){
         Player p = plugin.getServer().getPlayer(player);
         if (p == null)
@@ -55,55 +80,21 @@ public final class MuteManager implements Listener{
         String printableReason = "";
         if (reason.length() > 0)
             printableReason = " &eПричина: &a"+reason+"&e.";
-        
-        String prefix;
-        
-        if (admin.equals("#antiflood")){
-            prefix = "&f[&cАнтиФлуд&f] ";
-        } else if (admin.equals("#console")){
-            prefix = "&f[&aСервер&f] ";
-        } else if (Main.usePex){
-            ru.tehkode.permissions.PermissionUser user = ru.tehkode.permissions.bukkit.PermissionsEx.getPermissionManager().getUser(admin);
-            ru.tehkode.permissions.PermissionGroup[] groups = user.getGroups();
-            
-            if (Helper.containsGroup(groups, "Admin"))
-                prefix = "&f[&3"+admin+"&f] ";
-            else if (Helper.containsGroup(groups, "Admins"))
-                prefix = "&f[&3&l"+admin+"&f] ";
-            else if (Helper.containsGroup(groups, "Moder") || Helper.containsGroup(groups, "ServerModer"))
-                prefix = "&f[&b"+admin+"&f] ";
-            else if (Helper.containsGroup(groups, "MainModer"))
-                prefix = "&f[&b&l"+admin+"&f] ";
-            else if (Helper.containsGroup(groups, "Helper") || Helper.containsGroup(groups, "PHelper"))
-                prefix = "&f[&5"+admin+"&f] ";
-            else
-                prefix = "&f[&a"+admin+"&f] ";
-            
-        } else {
-            prefix = "&f[&a"+admin+"&f] ";
-        }
-        
-        if (reason.isEmpty())
+        else
             reason = null;
-        mutedPlayers.put(p.getName(), new MuteInfo(reason, time == 0 ? time : System.currentTimeMillis()+time*60000L, admin));
+        
+        String prefix = getPrefix(admin);
+        
+        mutedPlayers.put(p.getName(), new MuteInfo(reason, time == 0 ? time : System.currentTimeMillis()+time*60000L, prefix));
         
         plugin.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', prefix+"&eИгроку &a"+p.getName()+"&e запрещено писать в чат на &a"+timeMsg+printableReason));
         return true;
     }
     
-    private static class Helper{
-        private static boolean containsGroup(ru.tehkode.permissions.PermissionGroup[] groups, String name){
-            for (ru.tehkode.permissions.PermissionGroup g :groups)
-                if (g.getName().equalsIgnoreCase(name))
-                    return true;
-            return false;
-        }
-    }
-    
-    public boolean unMute(String player){
+    public boolean unMute(String admin, String player){
         if (isMuted(player)){
             mutedPlayers.remove(player);
-            plugin.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', "&eИгрок &a"+player+"&e снова может писать в чат"));
+            plugin.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', getPrefix(admin) + "&eИгрок &a"+player+"&e снова может писать в чат"));
             return true;
         }
         return false;
@@ -199,6 +190,15 @@ public final class MuteManager implements Listener{
     
     public Map<String, MuteInfo> getMutes(){
         return mutedPlayers;
+    }
+    
+    private static class Helper{
+        private static boolean containsGroup(ru.tehkode.permissions.PermissionGroup[] groups, String name){
+            for (ru.tehkode.permissions.PermissionGroup g :groups)
+                if (g.getName().equalsIgnoreCase(name))
+                    return true;
+            return false;
+        }
     }
     
     public static class MuteInfo implements Serializable{

@@ -92,10 +92,10 @@ public class Main extends JavaPlugin{
                 }else{
                     Player player = getServer().getPlayer(args[0]);
                     if (player == null){
-                        if (!mute.unMute(args[0]))
+                        if (!mute.unMute(senderName, args[0]))
                             sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&eИгрок &a"+args[0]+"&e не был замучен"));
                     }else{
-                        if (!mute.unMute(player.getName()))
+                        if (!mute.unMute(senderName, player.getName()))
                             sender.sendMessage(ChatColor.translateAlternateColorCodes('&', "&eИгрок &a"+player.getName()+"&e не был замучен"));
                     }
                 }

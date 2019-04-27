@@ -85,7 +85,7 @@ public final class MuteManager implements Listener{
         
         if (reason.isEmpty())
             reason = null;
-        mutedPlayers.put(p.getName(), new MuteInfo(reason, time == 0 ? time : System.currentTimeMillis()+time*60000, admin));
+        mutedPlayers.put(p.getName(), new MuteInfo(reason, time == 0 ? time : System.currentTimeMillis()+time*60000L, admin));
         
         plugin.getServer().broadcastMessage(ChatColor.translateAlternateColorCodes('&', prefix+"&eИгроку &a"+p.getName()+"&e запрещено писать в чат на &a"+timeMsg+printableReason));
         return true;

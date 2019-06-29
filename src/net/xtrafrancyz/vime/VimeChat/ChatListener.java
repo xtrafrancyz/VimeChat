@@ -1,13 +1,21 @@
 package net.xtrafrancyz.vime.VimeChat;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.regex.Pattern;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
  *
@@ -15,122 +23,149 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
  * @author xtrafrancyz
  */
 public class ChatListener implements Listener{
+    private static final Pattern PATTERN_1 = Pattern.compile("([ !?])\\1+");
+    private static final String BAD_REPLACER = "^_^";
+    
     private final Main plugin;
-    private static final Map<String, PlayerInfo> players = new HashMap<String, PlayerInfo>();
+    private final Map<String, PlayerInfo> players = new HashMap<>();
+    
+    private final Set<String> badWords = new HashSet<>();
     
     public ChatListener(Main plugin) {
         this.plugin = plugin;
-        players.clear();
+        
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(plugin.getResource("badwords.txt"), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty())
+                    badWords.add(normalizeWord(line));
+            }
+        } catch (Exception ex) {
+            plugin.getLogger().log(Level.WARNING, "Could not read bad words");
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        players.remove(event.getPlayer().getName());
     }
     
     @EventHandler(ignoreCancelled = true)
     public void onChat(final AsyncPlayerChatEvent event){
-        final Response res = processChat(event.getPlayer(), event.getMessage());
-        event.setMessage(res.message);
+        String message = replaceGarbage(event.getMessage());
+        event.setMessage(message);
         
-        if (res.messageToPlayer != null){
+        final String messageToPlayeer = checkMessage(event.getPlayer().getName(), message);
+        
+        if (messageToPlayeer != null){
             plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable(){
                 @Override
                 public void run() {
-                    event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', res.messageToPlayer));
+                    event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', messageToPlayeer));
                 }
             }, 1);
         }
     }
     
-    public Response processChat(final Player player, String message){
-        message = message
-                //восклицательные и вопросительные знаки не больше одного
-                .replaceAll("(\\!|\\?)\\1+", "$1")
-                //Убирание ?!?!?!?!?!?!?
-                .replaceAll("(\\!\\?|\\?\\!)+", "$1")
-                //Убирание большого количества точек
-                .replaceAll("\\.{3,}", "...")
-                //Замена повторяющихся символов (2 и более)
-                .replaceAll("([^\\.,\\!\\?])\\1+", "$1$1");
+    private String replaceGarbage(String message) {
+        // Восклицательные и вопросительные знаки не больше одного
+        message = PATTERN_1.matcher(message).replaceAll("$1");
         
+        // Убирание капса
         String[] words = message.split(" ");
+        boolean[] caps = new boolean[words.length];
         int capsWords = 0;
-        for (int i=0; i<words.length; i++){
-            if (words[i].length() > 2 && isUpperCase(words[i])){
-                capsWords ++;
-                words[i] = words[i].toLowerCase();
+        for (int i = 0; i < words.length; i++) {
+            if (badWords.contains(normalizeWord(words[i]))) {
+                words[i] = BAD_REPLACER;
+            } else if (words[i].length() > 3 && isUpperCase(words[i])) {
+                caps[i] = true;
+                capsWords++;
             }
         }
-        message = implode(words, " ");
+        if (capsWords > 1)
+            for (int i = 0; i < words.length; i++)
+                if (caps[i])
+                    words[i] = words[i].toLowerCase();
+        return implode(words, " ");
+    }
+    
+    public String checkMessage(final String name, String message){
+        MessageInfo curr = new MessageInfo(message, System.currentTimeMillis());
+        String returnMessage = null;
         
-        MessageInfo minfo = new MessageInfo(message, System.currentTimeMillis());
-        Response res = new Response(message);
-        boolean muted = false;
-        
-        PlayerInfo pinfo;
-        if (!players.containsKey(player.getName())){
-            pinfo = new PlayerInfo();
-            players.put(player.getName(), pinfo);
+        PlayerInfo player;
+        if (!players.containsKey(name)){
+            player = new PlayerInfo();
+            players.put(name, player);
         }else
-            pinfo = players.get(player.getName());
+            player = players.get(name);
         
-        if (capsWords > 2){
-            if (System.currentTimeMillis() - pinfo.lastCaps < 60*1000){
-                muted = true;
+        boolean checkSimilarity = message.length() > 4;
+        int similar = 0;
+        int fastMsgs = 0;
+        
+        while (!player.messages.isEmpty() && curr.time - player.messages.peekLast().time > 5 * 60_000)
+            player.messages.removeLast();
+        
+        for (MessageInfo prev : player.messages) {
+            long diff = curr.time - prev.time;
+            if (checkSimilarity) {
+                if (prev.message.length() > 4) {
+                    double similarity = JaroWinkler.similarity(prev.message, curr.message);
+                    double treshold = 1 - 0.02 / (0.2 + diff / (5 * 60000));
+                    if (similarity >= treshold)
+                        similar++;
+                }
+            }
+            if (diff < 5000)
+                fastMsgs++;
+        }
+        while (player.messages.size() > 7)
+            player.messages.removeLast();
+        player.messages.addFirst(curr);
+        
+        if (similar > 1 || similar == 1 && player.lastMsgIsSimilar) {
+            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable(){
+                @Override
+                public void run() {
+                    plugin.mute.mute("#antiflood", name, Main.muteTimeFlood, "Флуд одинаковыми сообщениями");
+                }
+            }, 1);
+        } else if (similar == 1) {
+            player.lastMsgIsSimilar = true;
+            returnMessage = "&f[&cАнтиФлуд&f]&6 Ваше сообщение идентично предыдущему. В следующий раз вам будет выдан мут.";
+        } else {
+            player.lastMsgIsSimilar = false;
+        }
+        
+        if (similar == 0 && fastMsgs >= 2) {
+            if (player.lastMsgIsTooFast) {
                 plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable(){
                     @Override
                     public void run() {
-                        plugin.mute.mute("#antiflood", player.getName(), Main.muteTimeCaps, "Капс");
+                        plugin.mute.mute("#antiflood", name, Main.muteTimeFlood, "Слишком частые сообщения");
                     }
                 }, 1);
-            }else{
-                res.messageToPlayer = "&f[&cАнтиФлуд&f]&6 Отключите Caps Lock или вы будете замучены.";
+                return null;
+            } else {
+                player.lastMsgIsTooFast = true;
+                returnMessage = "&f[&cАнтиФлуд&f]&6 Полегче, зачем так часто писать в чат?";
             }
-            pinfo.lastCaps = System.currentTimeMillis();
+        } else {
+            player.lastMsgIsTooFast = false;
         }
         
-        if (!muted && !pinfo.messages.isEmpty()){
-            if (pinfo.messages.size() > 3){
-                int maxDelay = (int) (minfo.time - pinfo.messages.getLast().time);
-                for (int i=pinfo.messages.size()-1; i>1; i--){
-                    int diff = (int) (pinfo.messages.get(i).time-pinfo.messages.get(i-1).time);
-                    if (diff > maxDelay)
-                        maxDelay = diff;
-                }
-                if (maxDelay < 2*1000){
-                    muted = true;
-                    plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable(){
-                        @Override
-                        public void run() {
-                            plugin.mute.mute("#antiflood", player.getName(), Main.muteTimeFlood, "Флуд");
-                        }
-                    }, 1);
-                }
-            }
-            if (!muted && minfo.equals(pinfo.messages.getLast())){
-                res.messageToPlayer = "&f[&cАнтиФлуд&f]&6 Ваше сообщение идентично предыдущему. В следующий раз вы будете замучены.";
-                if (pinfo.messages.size() > 1){
-                    MessageInfo prelast = pinfo.messages.get(pinfo.messages.size()-2);
-                    if (System.currentTimeMillis() - prelast.time < 20*1000 && prelast.equals(minfo)){
-                        res.messageToPlayer = null;
-                        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable(){
-                            @Override
-                            public void run() {
-                                plugin.mute.mute("#antiflood", player.getName(), Main.muteTimeFlood, "Флуд");
-                            }
-                        }, 1);
-                    }
-                }
-            }
-        }
-        
-        pinfo.messages.addLast(minfo);
-        pinfo.limitMessages(4);
-        return res;
+        return returnMessage;
     }
     
-    public static String implode(String[] arr, String splitter){
+    public static String implode(String[] arr, String glue){
         if (arr.length == 0)
             return "";
         StringBuilder sb = new StringBuilder(arr[0]);
         for (int i=1; i<arr.length; i++)
-            sb.append(splitter).append(arr[i]);
+            sb.append(glue).append(arr[i]);
         return sb.toString();
     }
     
@@ -139,6 +174,27 @@ public class ChatListener implements Listener{
             if (!Character.isUpperCase(c))
                 return false;
         return true;
+    }
+    
+    private static String normalizeWord(String str) {
+        char[] chars = str.toCharArray();
+        int len = chars.length;
+        int st = 0;
+        while (st < len && !Character.isAlphabetic(chars[st]))
+            st++;
+        while (st < len && !Character.isAlphabetic(chars[len - 1]))
+            len--;
+        str = ((st > 0) || (len < chars.length)) ? str.substring(st, len) : str;
+        return str.toLowerCase()
+            .replace('a', 'а')
+            .replace('e', 'е')
+            .replace('э', 'е')
+            .replace('ё', 'е')
+            .replace('y', 'у')
+            .replace('p', 'р')
+            .replace('x', 'х')
+            .replace('o', 'о')
+            .replace('c', 'с');
     }
     
     public static class Response{
@@ -151,8 +207,9 @@ public class ChatListener implements Listener{
     }
     
     public static class PlayerInfo{
-        public LinkedList<MessageInfo> messages = new LinkedList<MessageInfo>();
-        public long lastCaps = 0;
+        public Deque<MessageInfo> messages = new ArrayDeque<>();
+        public boolean lastMsgIsSimilar;
+        public boolean lastMsgIsTooFast;
         
         public void limitMessages(int max){
             while (messages.size() > max)
@@ -165,12 +222,8 @@ public class ChatListener implements Listener{
         public long time;
 
         public MessageInfo(String message, long time) {
-            this.message = message.replaceAll("[^\\wа-яА-Я\\- ]", "");
+            this.message = message;
             this.time = time;
-        }
-        
-        public boolean equals(MessageInfo i){
-            return message.equals(i.message);
         }
     }
 }

@@ -1,6 +1,7 @@
 package net.xtrafrancyz.vime.VimeChat;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import static net.xtrafrancyz.vime.VimeChat.MuteManager.plurals;
 import org.bukkit.ChatColor;
@@ -104,7 +105,7 @@ public class Main extends JavaPlugin{
             //Списочегг
             if (command.getName().equalsIgnoreCase("mutelist")){
                 if (mute.getMutes().size() > 0){
-                    LinkedList<String> list = new LinkedList<String>();
+                    List<String> list = new ArrayList<>();
                     for (Map.Entry<String, MuteManager.MuteInfo> entry: mute.getMutes().entrySet()){
                         MuteManager.MuteInfo mi = entry.getValue();
                         String remaining;
@@ -114,7 +115,7 @@ public class Main extends JavaPlugin{
                         }else{
                             remaining = "Вечный мут";
                         }
-                        list.addLast(ChatColor.translateAlternateColorCodes('&', "&a"+entry.getKey()+"&e Осталось: &a"+remaining+"&e. Замутил: &a"+mi.admin+"&e. Причина: &a"+(mi.reason != null ? mi.reason : "Не указана")));
+                        list.add(ChatColor.translateAlternateColorCodes('&', "&a"+entry.getKey()+"&e Осталось: &a"+remaining+"&e. Замутил: &a"+mi.admin+"&e. Причина: &a"+(mi.reason != null ? mi.reason : "Не указана")));
                     }
                     sender.sendMessage(list.toArray(new String[0]));
                 }else{

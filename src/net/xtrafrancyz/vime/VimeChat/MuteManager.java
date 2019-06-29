@@ -169,13 +169,13 @@ public final class MuteManager implements Listener{
 
     public void load(){
         if (!saveFile.exists()) {
-            mutedPlayers = new ConcurrentHashMap<String, MuteInfo>();
+            mutedPlayers = new ConcurrentHashMap<>();
         } else {
             try {
                 ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(saveFile)));
                 mutedPlayers = (Map) ois.readObject();
                 if (mutedPlayers instanceof HashMap){
-                    ConcurrentHashMap<String, MuteInfo> newmap = new ConcurrentHashMap<String, MuteInfo>();
+                    Map<String, MuteInfo> newmap = new ConcurrentHashMap<>();
                     for (Map.Entry<String, MuteInfo> e: mutedPlayers.entrySet())
                         newmap.put(e.getKey(), e.getValue());
                     mutedPlayers = newmap;
@@ -183,7 +183,7 @@ public final class MuteManager implements Listener{
                 ois.close();
             } catch (IOException | ClassNotFoundException ex) {
                 plugin.getLogger().log(Level.SEVERE, null, ex);
-                mutedPlayers = new ConcurrentHashMap<String, MuteInfo>();
+                mutedPlayers = new ConcurrentHashMap<>();
             }
         }
     }

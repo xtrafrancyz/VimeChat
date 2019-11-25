@@ -37,9 +37,9 @@ public class ChatListener implements Listener{
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(plugin.getResource("badwords.txt"), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                line = line.trim();
+                line = normalizeWord(line.trim());
                 if (!line.isEmpty())
-                    badWords.add(normalizeWord(line));
+                    badWords.add(line);
             }
         } catch (Exception ex) {
             plugin.getLogger().log(Level.WARNING, "Could not read bad words");
@@ -186,6 +186,7 @@ public class ChatListener implements Listener{
             len--;
         str = ((st > 0) || (len < chars.length)) ? str.substring(st, len) : str;
         return str.toLowerCase()
+            .replace('6', 'b')
             .replace('a', 'а')
             .replace('e', 'е')
             .replace('э', 'е')

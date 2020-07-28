@@ -11,10 +11,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
@@ -48,7 +50,26 @@ public class ChatListener implements Listener{
     
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        players.remove(event.getPlayer().getName());
+        final String name = event.getPlayer().getName();
+        final PlayerInfo info = players.get(name);
+        if (info != null) {
+            info.removeTask = Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    players.remove(name);
+                    info.removeTask = -1;
+                }
+            }, 20*60*5);
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        PlayerInfo info = players.get(event.getPlayer().getName());
+        if (info != null && info.removeTask != -1) {
+            Bukkit.getScheduler().cancelTask(info.removeTask);
+            info.removeTask = -1;
+        }
     }
     
     @EventHandler(ignoreCancelled = true)
@@ -211,6 +232,7 @@ public class ChatListener implements Listener{
         public Deque<MessageInfo> messages = new ArrayDeque<>();
         public boolean lastMsgIsSimilar;
         public boolean lastMsgIsTooFast;
+        public int removeTask = -1;
         
         public void limitMessages(int max){
             while (messages.size() > max)
